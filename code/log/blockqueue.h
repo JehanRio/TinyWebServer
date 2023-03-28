@@ -10,47 +10,28 @@ template<class T>
 class BlockDeque {
 public:
     explicit BlockDeque(size_t MaxCapacity = 1000);
-
     ~BlockDeque();
-
     void clear();
-
     bool empty();
-
     bool full();
-
     void Close();
-
     size_t size();
-
     size_t capacity();
-
     T front();
-
     T back();
-
     void push_back(const T &item);
-
     void push_front(const T &item);
-
     bool pop(T &item);
-
     bool pop(T &item, int timeout);
-
     void flush();
 
 private:
-    std::deque<T> deq_;
-
-    size_t capacity_;
-
-    std::mutex mtx_;
-
-    bool isClose_;
-
-    std::condition_variable condConsumer_;
-
-    std::condition_variable condProducer_;
+    std::deque<T> deq_;     // 底层数据结构
+    size_t capacity_;       // 容量
+    std::mutex mtx_;        // 锁
+    bool isClose_;          // 状态变量
+    std::condition_variable condConsumer_;  // 消费者：出队列
+    std::condition_variable condProducer_;  // 生产者：进队列，任务队列
 };
 
 
@@ -76,11 +57,13 @@ void BlockDeque<T>::Close() {
     condConsumer_.notify_all();
 };
 
+// 唤醒消费者
 template<class T>
 void BlockDeque<T>::flush() {
     condConsumer_.notify_one();
 };
 
+// 清空队列
 template<class T>
 void BlockDeque<T>::clear() {
     std::lock_guard<std::mutex> locker(mtx_);
@@ -115,10 +98,10 @@ template<class T>
 void BlockDeque<T>::push_back(const T &item) {
     std::unique_lock<std::mutex> locker(mtx_);
     while(deq_.size() >= capacity_) {
-        condProducer_.wait(locker);
+        condProducer_.wait(locker);     // 任务数量超过最大容量，暂停生产，等待消费者唤醒生产条件变量
     }
     deq_.push_back(item);
-    condConsumer_.notify_one();
+    condConsumer_.notify_one();         // 有任务了，唤醒消费者
 }
 
 template<class T>
@@ -147,14 +130,14 @@ template<class T>
 bool BlockDeque<T>::pop(T &item) {
     std::unique_lock<std::mutex> locker(mtx_);
     while(deq_.empty()){
-        condConsumer_.wait(locker);
+        condConsumer_.wait(locker);     // 任务队列空了，等待生产者的生产信号
         if(isClose_){
             return false;
         }
     }
     item = deq_.front();
     deq_.pop_front();
-    condProducer_.notify_one();
+    condProducer_.notify_one();     // 唤醒消费者
     return true;
 }
 

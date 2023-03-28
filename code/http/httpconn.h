@@ -8,7 +8,6 @@
 #include <errno.h>      
 
 #include "../log/log.h"
-#include "../pool/sqlconnRAII.h"
 #include "../buffer/buffer.h"
 #include "httprequest.h"
 #include "httpresponse.h"

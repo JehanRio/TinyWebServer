@@ -188,7 +188,8 @@ void WebServer::OnWrite_(HttpConn* client) {
     if(client->ToWriteBytes() == 0) {
         /* 传输完成 */
         if(client->IsKeepAlive()) {
-            OnProcess(client);
+            // OnProcess(client);
+            epoller_->ModFd(client->GetFd(), connEvent_ | EPOLLIN); // 换成监测读事件
             return;
         }
     }

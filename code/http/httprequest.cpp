@@ -23,7 +23,7 @@ bool HttpRequest::IsKeepAlive() const {
 }
 
 bool HttpRequest::parse(Buffer& buff) {
-    const char CRLF[] = "\r\n";
+    const char CRLF[] = "\r\n";      // 行结束符标志(回车换行)
     if(buff.ReadableBytes() <= 0) {
         return false;
     }
@@ -51,7 +51,7 @@ bool HttpRequest::parse(Buffer& buff) {
             break;
         }
         if(lineEnd == buff.BeginWrite()) { break; }
-        buff.RetrieveUntil(lineEnd + 2);
+        buff.RetrieveUntil(lineEnd + 2);        // 跳过回车换行
     }
     LOG_DEBUG("[%s], [%s], [%s]", method_.c_str(), path_.c_str(), version_.c_str());
     return true;
