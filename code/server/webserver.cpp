@@ -12,14 +12,16 @@ WebServer::WebServer(
     {
     srcDir_ = getcwd(nullptr, 256);
     assert(srcDir_);
-    strncat(srcDir_, "/resources/", 16);
+    strcat(srcDir_, "/resources/");
     HttpConn::userCount = 0;
     HttpConn::srcDir = srcDir_;
-    SqlConnPool::Instance()->Init("localhost", sqlPort, sqlUser, sqlPwd, dbName, connPoolNum);
+    SqlConnPool::Instance()->Init("localhost", sqlPort, sqlUser, sqlPwd, dbName, connPoolNum);  // 连接池单例的初始化
 
+    // 初始化事件和初始化socket(监听)
     InitEventMode_(trigMode);
     if(!InitSocket_()) { isClose_ = true;}
 
+    // 是否打开日志标志
     if(openLog) {
         Log::Instance()->init(logLevel, "./log", ".log", logQueSize);
         if(isClose_) { LOG_ERROR("========== Server init error!=========="); }
@@ -214,6 +216,9 @@ bool WebServer::InitSocket_() {
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
     addr.sin_port = htons(port_);
+
+    // 优雅关闭
+    {
     struct linger optLinger = { 0 };
     if(openLinger_) {
         /* 优雅关闭: 直到所剩数据发送完毕或超时 */
@@ -233,6 +238,7 @@ bool WebServer::InitSocket_() {
         LOG_ERROR("Init linger error!", port_);
         return false;
     }
+    }
 
     int optval = 1;
     /* 端口复用 */
@@ -244,6 +250,7 @@ bool WebServer::InitSocket_() {
         return false;
     }
 
+    // 绑定
     ret = bind(listenFd_, (struct sockaddr *)&addr, sizeof(addr));
     if(ret < 0) {
         LOG_ERROR("Bind Port:%d error!", port_);
@@ -251,23 +258,25 @@ bool WebServer::InitSocket_() {
         return false;
     }
 
+    // 监听
     ret = listen(listenFd_, 6);
     if(ret < 0) {
         LOG_ERROR("Listen port:%d error!", port_);
         close(listenFd_);
         return false;
     }
-    ret = epoller_->AddFd(listenFd_,  listenEvent_ | EPOLLIN);
+    ret = epoller_->AddFd(listenFd_,  listenEvent_ | EPOLLIN);  // 讲监听套接字加入epoller
     if(ret == 0) {
         LOG_ERROR("Add listen error!");
         close(listenFd_);
         return false;
     }
-    SetFdNonblock(listenFd_);
+    SetFdNonblock(listenFd_);   
     LOG_INFO("Server port:%d", port_);
     return true;
 }
 
+// 设置非阻塞
 int WebServer::SetFdNonblock(int fd) {
     assert(fd > 0);
     return fcntl(fd, F_SETFL, fcntl(fd, F_GETFD, 0) | O_NONBLOCK);

@@ -15,17 +15,18 @@ void HeapTimer::SwapNode_(size_t i, size_t j) {
     assert(i >= 0 && i < heap_.size());
     assert(j >= 0 && j < heap_.size());
     std::swap(heap_[i], heap_[j]);
-    ref_[heap_[i].id] = i;
+    ref_[heap_[i].id] = i;  // 结点所在索引位置也要变化
     ref_[heap_[j].id] = j;
 } 
 
+// false：不需要下滑  true：下滑成功
 bool HeapTimer::siftdown_(size_t index, size_t n) {
     assert(index >= 0 && index < heap_.size());
     assert(n >= 0 && n <= heap_.size());
     size_t i = index;
     size_t j = i * 2 + 1;
     while(j < n) {
-        if(j + 1 < n && heap_[j + 1] < heap_[j]) j++;
+        if(j + 1 < n && heap_[j + 1] < heap_[j]) j++;   // 选择两个子结点中较小的
         if(heap_[i] < heap_[j]) break;
         SwapNode_(i, j);
         i = j;
@@ -41,7 +42,7 @@ void HeapTimer::add(int id, int timeout, const TimeoutCallBack& cb) {
         /* 新节点：堆尾插入，调整堆 */
         i = heap_.size();
         ref_[id] = i;
-        heap_.push_back({id, Clock::now() + MS(timeout), cb});
+        heap_.push_back({id, Clock::now() + MS(timeout), cb});  // 右值
         siftup_(i);
     } 
     else {
@@ -62,7 +63,7 @@ void HeapTimer::doWork(int id) {
     }
     size_t i = ref_[id];
     TimerNode node = heap_[i];
-    node.cb();
+    node.cb();  // 触发回调函数
     del_(i);
 }
 
