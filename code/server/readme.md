@@ -62,15 +62,15 @@ std::unordered_map<int, HTTPconnection> users_;//连接队列
 
         2. 等待事件就绪
 
-            1. 连接事件－－＞handleListen()
+            1. 连接事件－－＞DealListen()
 
-            2. 写事件－－＞handleWrite()
+            2. 写事件－－＞DealWrite()
 
-            3. 读事件－－＞handleRead()
+            3. 读事件－－＞DealRead()
 
         3. 事件处理完毕，修改反应堆，再跳到２处循环执行
 
-    4. handleListen: 新初始化一个ＨttpConnection对象
+    4. handleListen:  新初始化一个ＨttpConnection对象
 
     5. handleWrite：　对应连接对象进行处理－－＞若处理成功，则监听事件转换成　读　事件
 
