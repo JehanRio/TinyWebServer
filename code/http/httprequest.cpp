@@ -40,7 +40,7 @@ bool HttpRequest::parse(Buffer& buff) {
             break;    
         case HEADERS:
             ParseHeader_(line);
-            if(buff.ReadableBytes() <= 2) {
+            if(buff.ReadableBytes() <= 2) { 
                 state_ = FINISH;
             }
             break;

@@ -3,6 +3,8 @@
 
 一般的做法是将每个定时事件封装成定时器，并使用某种容器类数据结构将所有的定时器保存好，实现对定时事件的统一管理。常用方法有排序链表、红黑树、时间堆和时间轮。这里使用的是时间堆。
 
+时间堆的底层实现是由小根堆实现的。小根堆可以保证堆顶元素为最小的。
+
 
 ## 小根堆详解
 传统的定时方案是以固定频率调用起搏函数tick，进而执行定时器上的回调函数。而时间堆的做法则是将所有定时器中超时时间最小的一个定时器的超时值作为心搏间隔，当超时时间到达时，处理超时事件，然后再次从剩余定时器中找出超时时间最小的一个，依次反复即可。
@@ -18,4 +20,30 @@
 5分钟到达后处理1号定时器事件，再根据2号超时时间设定心搏间隔.
 
 
+为了后面处理过期连接的方便，我们给每一个定时器里面放置一个回调函数，用来关闭过期连接。
 
+为了便于定时器结点的比较，主要是后续堆结构的实现方便，我们还需要重载比较运算符。
+```c++
+struct TimerNode{
+public:
+    int id;             //用来标记定时器
+    TimeStamp expire;   //设置过期时间
+    TimeoutCallBack cb; //设置一个回调函数用来方便删除定时器时将对应的HTTP连接关闭
+    bool operator<(const TimerNode& t)
+    {
+        return expire<t.expire;
+    }
+};
+```
+添加方法：`timer_->add(fd, timeoutMS_, std::bind(&WebServer::CloseConn_, this, &users_[fd]));`
+由于`TimeoutCallBack`的类型是`std::function<void()>`，所以这里采用bind绑定参数。
+
+## 定时器的管理
+主要有对堆节点进行增删和调整的操作。
+```c++
+void addTimer(int id,int timeout,const TimeoutCallBack& cb);//添加一个定时器
+void del_(size_t i);//删除指定定时器
+void siftup_(size_t i);//向上调整
+bool siftdown_(size_t index,size_t n);//向下调整,若不能向下则返回false
+void swapNode_(size_t i,size_t j);//交换两个结点位置
+```

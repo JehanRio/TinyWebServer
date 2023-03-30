@@ -59,10 +59,11 @@ ssize_t HttpConn::read(int* saveErrno) {
         if (len <= 0) {
             break;
         }
-    } while (isET);
+    } while (isET); // ET:要一次性全部读出
     return len;
 }
 
+// 主要采用writev连续写函数
 ssize_t HttpConn::write(int* saveErrno) {
     ssize_t len = -1;
     do {
@@ -94,14 +95,14 @@ bool HttpConn::process() {
     if(readBuff_.ReadableBytes() <= 0) {
         return false;
     }
-    else if(request_.parse(readBuff_)) {
+    else if(request_.parse(readBuff_)) {    // 解析成功
         LOG_DEBUG("%s", request_.path().c_str());
         response_.Init(srcDir, request_.path(), request_.IsKeepAlive(), 200);
     } else {
         response_.Init(srcDir, request_.path(), false, 400);
     }
 
-    response_.MakeResponse(writeBuff_);
+    response_.MakeResponse(writeBuff_); // 生成响应报文
     /* 响应头 */
     iov_[0].iov_base = const_cast<char*>(writeBuff_.Peek());
     iov_[0].iov_len = writeBuff_.ReadableBytes();

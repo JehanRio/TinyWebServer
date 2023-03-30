@@ -15,8 +15,9 @@ WebServer::WebServer(
     strcat(srcDir_, "/resources/");
     HttpConn::userCount = 0;
     HttpConn::srcDir = srcDir_;
-    SqlConnPool::Instance()->Init("localhost", sqlPort, sqlUser, sqlPwd, dbName, connPoolNum);  // 连接池单例的初始化
 
+    // 初始化操作
+    SqlConnPool::Instance()->Init("localhost", sqlPort, sqlUser, sqlPwd, dbName, connPoolNum);  // 连接池单例的初始化
     // 初始化事件和初始化socket(监听)
     InitEventMode_(trigMode);
     if(!InitSocket_()) { isClose_ = true;}
@@ -46,8 +47,8 @@ WebServer::~WebServer() {
 }
 
 void WebServer::InitEventMode_(int trigMode) {
-    listenEvent_ = EPOLLRDHUP;
-    connEvent_ = EPOLLONESHOT | EPOLLRDHUP;
+    listenEvent_ = EPOLLRDHUP;    // 检测socket关闭
+    connEvent_ = EPOLLONESHOT | EPOLLRDHUP;     // EPOLLONESHOT由一个线程处理
     switch (trigMode)
     {
     case 0:
@@ -75,7 +76,7 @@ void WebServer::Start() {
     if(!isClose_) { LOG_INFO("========== Server start =========="); }
     while(!isClose_) {
         if(timeoutMS_ > 0) {
-            timeMS = timer_->GetNextTick();
+            timeMS = timer_->GetNextTick();     // 获取下一次的超时等待事件(至少这个时间才会有用户过期)
         }
         int eventCnt = epoller_->Wait(timeMS);
         for(int i = 0; i < eventCnt; i++) {
@@ -130,6 +131,7 @@ void WebServer::AddClient_(int fd, sockaddr_in addr) {
     LOG_INFO("Client[%d] in!", users_[fd].GetFd());
 }
 
+// 处理监听套接字，主要逻辑是accept新的套接字，并加入timer和epoller中
 void WebServer::DealListen_() {
     struct sockaddr_in addr;
     socklen_t len = sizeof(addr);
@@ -145,12 +147,14 @@ void WebServer::DealListen_() {
     } while(listenEvent_ & EPOLLET);
 }
 
+// 处理读事件，主要逻辑是将OnRead加入线程池的任务队列中
 void WebServer::DealRead_(HttpConn* client) {
     assert(client);
     ExtentTime_(client);
-    threadpool_->AddTask(std::bind(&WebServer::OnRead_, this, client));
+    threadpool_->AddTask(std::bind(&WebServer::OnRead_, this, client)); // 这是一个右值，bind将参数和函数绑定
 }
 
+// 处理写事件，主要逻辑是将OnWrite加入线程池的任务队列中
 void WebServer::DealWrite_(HttpConn* client) {
     assert(client);
     ExtentTime_(client);
@@ -166,17 +170,20 @@ void WebServer::OnRead_(HttpConn* client) {
     assert(client);
     int ret = -1;
     int readErrno = 0;
-    ret = client->read(&readErrno);
-    if(ret <= 0 && readErrno != EAGAIN) {
+    ret = client->read(&readErrno);         // 读取客户端套接字的数据，读到httpconn的读缓存区
+    if(ret <= 0 && readErrno != EAGAIN) {   // 读异常就关闭客户端
         CloseConn_(client);
         return;
     }
+    // 业务逻辑的处理（先读后处理）
     OnProcess(client);
 }
 
+/* 处理读（请求）数据的函数 */
 void WebServer::OnProcess(HttpConn* client) {
-    if(client->process()) {
-        epoller_->ModFd(client->GetFd(), connEvent_ | EPOLLOUT);
+    // 首先调用process()进行逻辑处理
+    if(client->process()) { // 根据返回的信息重新将fd置为EPOLLOUT（写）或EPOLLIN（读）
+        epoller_->ModFd(client->GetFd(), connEvent_ | EPOLLOUT);    // 响应成功，修改监听事件为写,等待OnWrite_()发送
     } else {
         epoller_->ModFd(client->GetFd(), connEvent_ | EPOLLIN);
     }
@@ -196,7 +203,7 @@ void WebServer::OnWrite_(HttpConn* client) {
         }
     }
     else if(ret < 0) {
-        if(writeErrno == EAGAIN) {
+        if(writeErrno == EAGAIN) {  // 缓冲区满了 
             /* 继续传输 */
             epoller_->ModFd(client->GetFd(), connEvent_ | EPOLLOUT);
             return;

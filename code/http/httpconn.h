@@ -36,6 +36,7 @@ public:
     
     bool process();
 
+    // 写的总长度
     int ToWriteBytes() { 
         return iov_[0].iov_len + iov_[1].iov_len; 
     }
