@@ -75,11 +75,23 @@ INSERT INTO user(username, password) VALUES('name', 'password');
 
 ## Test
 ```bash
+日志、线程池测试：
 cd test
 make
 ./test
+
+
+服务器压力测试：
+cd webbench-1.5
+make
+webbench -c 1000 -t 30 http://ip:port/
+
+参数：
+	-c 表示客户端数
+	-t 表示时间
 ```
 
+![](./imgs/pressure.png)
 ## TODO
 * config配置
 * 完善单元测试
