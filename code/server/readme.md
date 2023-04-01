@@ -117,7 +117,7 @@ threadpool_->AddTask(std::bind(&WebServer::OnWrite_, this, client));    //写
 
 `OnRead_()`和`OnWrite_()`函数分别进行读写的处理。
 
-`OnRead_()`函数首先把数据从缓冲区中读出来，然后交由逻辑函数`OnProcess()`处理。这里多说一句，`process()`函数在解析请求报文后随即就生成了响应报文等待OnWrite_()函数发送。
+`OnRead_()`函数首先把数据从缓冲区中读出来(调用HttpConn的read,read调用ReadFd读取到读缓冲区BUFFER)，然后交由逻辑函数`OnProcess()`处理。这里多说一句，`process()`函数在解析请求报文后随即就生成了响应报文等待OnWrite_()函数发送。
 
 这里必须说清楚OnRead_()和OnWrite_()函数进行读写的方法，那就是：**分散读和集中写**
 > 分散读（scatter read）和集中写（gatherwrite）具体来说是来自读操作的输入数据被分散到多个应用缓冲区中，而来自应用缓冲区的输出数据则被集中提供给单个写操作。

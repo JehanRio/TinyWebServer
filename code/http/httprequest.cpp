@@ -111,9 +111,9 @@ int HttpRequest::ConverHex(char ch) {
 
 void HttpRequest::ParsePost_() {
     if(method_ == "POST" && header_["Content-Type"] == "application/x-www-form-urlencoded") {
-        ParseFromUrlencoded_();
-        if(DEFAULT_HTML_TAG.count(path_)) {
-            int tag = DEFAULT_HTML_TAG.find(path_)->second;
+        ParseFromUrlencoded_();     // POST请求体示例
+        if(DEFAULT_HTML_TAG.count(path_)) { // 如果是登录/注册的path
+            int tag = DEFAULT_HTML_TAG.find(path_)->second; 
             LOG_DEBUG("Tag:%d", tag);
             if(tag == 0 || tag == 1) {
                 bool isLogin = (tag == 1);

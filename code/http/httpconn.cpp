@@ -102,7 +102,7 @@ bool HttpConn::process() {
         response_.Init(srcDir, request_.path(), false, 400);
     }
 
-    response_.MakeResponse(writeBuff_); // 生成响应报文
+    response_.MakeResponse(writeBuff_); // 生成响应报文放入writeBuff_中
     /* 响应头 */
     iov_[0].iov_base = const_cast<char*>(writeBuff_.Peek());
     iov_[0].iov_len = writeBuff_.ReadableBytes();
