@@ -11,8 +11,9 @@
 #include <arpa/inet.h>
 
 #include "epoller.h"
-#include "../log/log.h"
 #include "../timer/heaptimer.h"
+
+#include "../log/log.h"
 #include "../pool/sqlconnpool.h"
 #include "../pool/threadpool.h"
 #include "../http/httpconn.h"

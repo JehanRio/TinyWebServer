@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <string>
-#include <regex>
+#include <regex>    // 正则表达式
 #include <errno.h>     
 #include <mysql/mysql.h>  //mysql
 
@@ -21,16 +21,16 @@ public:
         FINISH,        
     };
 
-    enum HTTP_CODE {
-        NO_REQUEST = 0,
-        GET_REQUEST,
-        BAD_REQUEST,
-        NO_RESOURSE,
-        FORBIDDENT_REQUEST,
-        FILE_REQUEST,
-        INTERNAL_ERROR,
-        CLOSED_CONNECTION,
-    };
+    // enum HTTP_CODE {
+    //     NO_REQUEST = 0,
+    //     GET_REQUEST,
+    //     BAD_REQUEST,
+    //     NO_RESOURSE,
+    //     FORBIDDENT_REQUEST,
+    //     FILE_REQUEST,
+    //     INTERNAL_ERROR,
+    //     CLOSED_CONNECTION,
+    // };
     
     HttpRequest() { Init(); }
     ~HttpRequest() = default;
