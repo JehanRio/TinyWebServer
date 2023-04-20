@@ -59,7 +59,7 @@ ssize_t HttpConn::read(int* saveErrno) {
         if (len <= 0) {
             break;
         }
-    } while (isET); // ET:要一次性全部读出
+    } while (isET); // ET:边沿触发要一次性全部读出
     return len;
 }
 
@@ -67,7 +67,7 @@ ssize_t HttpConn::read(int* saveErrno) {
 ssize_t HttpConn::write(int* saveErrno) {
     ssize_t len = -1;
     do {
-        len = writev(fd_, iov_, iovCnt_);
+        len = writev(fd_, iov_, iovCnt_);   // 将iov的内容写到fd中
         if(len <= 0) {
             *saveErrno = errno;
             break;

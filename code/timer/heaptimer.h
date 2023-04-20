@@ -26,7 +26,7 @@ struct TimerNode {
 };
 class HeapTimer {
 public:
-    HeapTimer() { heap_.reserve(64); }
+    HeapTimer() { heap_.reserve(64); }  // 保留（扩充）容量
 
     ~HeapTimer() { clear(); }
     

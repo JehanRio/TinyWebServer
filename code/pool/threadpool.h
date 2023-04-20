@@ -19,7 +19,7 @@ public:
                             auto task = std::move(pool_->tasks.front());    // 左值变右值,资产转移
                             pool_->tasks.pop();
                             locker.unlock();
-                            task(); // 处理任务
+                            task(); // 处理任务：task是一个可调用对象
                             locker.lock();
                         } 
                         else if(pool_->isClosed) break;

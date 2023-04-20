@@ -16,6 +16,7 @@
 #include "../log/log.h"
 #include "../pool/sqlconnpool.h"
 #include "../pool/threadpool.h"
+
 #include "../http/httpconn.h"
 
 class WebServer {
@@ -57,8 +58,8 @@ private:
     int listenFd_;
     char* srcDir_;
     
-    uint32_t listenEvent_;
-    uint32_t connEvent_;
+    uint32_t listenEvent_;  // 监听事件
+    uint32_t connEvent_;    // 连接事件
    
     std::unique_ptr<HeapTimer> timer_;
     std::unique_ptr<ThreadPool> threadpool_;

@@ -38,13 +38,13 @@ public:
     ssize_t WriteFd(int fd, int* Errno);
 
 private:
-    char* BeginPtr_();
+    char* BeginPtr_();  // buffer开头
     const char* BeginPtr_() const;
     void MakeSpace_(size_t len);
 
-    std::vector<char> buffer_;
-    std::atomic<std::size_t> readPos_;
-    std::atomic<std::size_t> writePos_;
+    std::vector<char> buffer_;  
+    std::atomic<std::size_t> readPos_;  // 读的下标
+    std::atomic<std::size_t> writePos_; // 写的下标
 };
 
 #endif //BUFFER_H

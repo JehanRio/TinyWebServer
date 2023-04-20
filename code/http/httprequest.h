@@ -36,7 +36,7 @@ public:
     ~HttpRequest() = default;
 
     void Init();
-    bool parse(Buffer& buff);
+    bool parse(Buffer& buff);   
 
     std::string path() const;
     std::string& path();
@@ -54,15 +54,15 @@ public:
     */
 
 private:
-    bool ParseRequestLine_(const std::string& line);
-    void ParseHeader_(const std::string& line);
-    void ParseBody_(const std::string& line);
+    bool ParseRequestLine_(const std::string& line);    // 处理请求行
+    void ParseHeader_(const std::string& line);         // 处理请求头
+    void ParseBody_(const std::string& line);           // 处理请求体
 
-    void ParsePath_();
-    void ParsePost_();
-    void ParseFromUrlencoded_();
+    void ParsePath_();                                  // 处理请求路径
+    void ParsePost_();                                  // 处理Post事件
+    void ParseFromUrlencoded_();                        // 从url种解析编码
 
-    static bool UserVerify(const std::string& name, const std::string& pwd, bool isLogin);
+    static bool UserVerify(const std::string& name, const std::string& pwd, bool isLogin);  // 用户验证
 
     PARSE_STATE state_;
     std::string method_, path_, version_, body_;
@@ -71,7 +71,7 @@ private:
 
     static const std::unordered_set<std::string> DEFAULT_HTML;
     static const std::unordered_map<std::string, int> DEFAULT_HTML_TAG;
-    static int ConverHex(char ch);
+    static int ConverHex(char ch);  // 16进制转换为10进制
 };
 
 

@@ -12,6 +12,24 @@
 3、通过实例调用write_log()函数写日志，首先根据当前时刻创建日志（前缀为时间，后缀为".log"，并更新日期today和当前行数lineCount。
 
 4、在write_log()函数内部，通过isAsync变量判断写日志的方法：如果是异步，工作线程将要写的内容放进阻塞队列中，由写线程在阻塞队列中取出数据，然后写入日志；如果是同步，直接写入日志文件中。
+> 该函数采用了不定参数的形式，具体使用步骤如下：
+> 
+> ```C++
+> va_list vaList;
+> va_start(vaList, format);
+> int m = vsnprintf(buff_.BeginWrite(), buff_.WritableBytes(), format, vaList);
+> va_end(vaList);
+> ```
+
+关于unique_ptr的移动拷贝构造： https://blog.csdn.net/tongyi04/article/details/123405806
+## blockqueue
+阻塞队列采用deque实现。
+若`MaxCapacity`为0，则为同步日志，不需要阻塞队列。
+
+内部有生产者消费者模型，搭配锁、条件变量使用。
+
+其中，消费者防止任务队列为空，生产者防止任务队列满。
+
 ## 日志的分级与分文件：
 **分级情况：**
 + Debug，调试代码时的输出，在系统实际运行时，一般不使用。

@@ -75,7 +75,8 @@ std::unordered_map<int, HTTPconnection> users_;//连接队列
     5. DealWrite：　对应连接对象进行处理－－＞若处理成功，则监听事件转换成　读　事件
 
     6. DealRead：　 对应连接对象进行处理－－＞若处理成功，则监听事件转换成　写　事件
-
+## Epoller
+对增删查改的简单封装。
 ## WebServer 类详解
 ### 1. 初始化
 ```c++

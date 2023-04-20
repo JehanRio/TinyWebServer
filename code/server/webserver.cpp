@@ -76,7 +76,7 @@ void WebServer::Start() {
     if(!isClose_) { LOG_INFO("========== Server start =========="); }
     while(!isClose_) {
         if(timeoutMS_ > 0) {
-            timeMS = timer_->GetNextTick();     // 获取下一次的超时等待事件(至少这个时间才会有用户过期)
+            timeMS = timer_->GetNextTick();     // 获取下一次的超时等待事件(至少这个时间才会有用户过期，每次关闭超时连接则需要有新的请求进来)
         }
         int eventCnt = epoller_->Wait(timeMS);
         for(int i = 0; i < eventCnt; i++) {
@@ -183,8 +183,10 @@ void WebServer::OnRead_(HttpConn* client) {
 void WebServer::OnProcess(HttpConn* client) {
     // 首先调用process()进行逻辑处理
     if(client->process()) { // 根据返回的信息重新将fd置为EPOLLOUT（写）或EPOLLIN（读）
+    //读完事件就跟内核说可以写了
         epoller_->ModFd(client->GetFd(), connEvent_ | EPOLLOUT);    // 响应成功，修改监听事件为写,等待OnWrite_()发送
     } else {
+    //写完事件就跟内核说可以读了
         epoller_->ModFd(client->GetFd(), connEvent_ | EPOLLIN);
     }
 }
@@ -198,7 +200,7 @@ void WebServer::OnWrite_(HttpConn* client) {
         /* 传输完成 */
         if(client->IsKeepAlive()) {
             // OnProcess(client);
-            epoller_->ModFd(client->GetFd(), connEvent_ | EPOLLIN); // 换成监测读事件
+            epoller_->ModFd(client->GetFd(), connEvent_ | EPOLLIN); // 回归换成监测读事件
             return;
         }
     }
@@ -272,7 +274,7 @@ bool WebServer::InitSocket_() {
         close(listenFd_);
         return false;
     }
-    ret = epoller_->AddFd(listenFd_,  listenEvent_ | EPOLLIN);  // 讲监听套接字加入epoller
+    ret = epoller_->AddFd(listenFd_,  listenEvent_ | EPOLLIN);  // 将监听套接字加入epoller
     if(ret == 0) {
         LOG_ERROR("Add listen error!");
         close(listenFd_);

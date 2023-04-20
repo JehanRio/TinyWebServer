@@ -22,21 +22,28 @@ bool HttpRequest::IsKeepAlive() const {
     return false;
 }
 
+// 解析处理
 bool HttpRequest::parse(Buffer& buff) {
     const char CRLF[] = "\r\n";      // 行结束符标志(回车换行)
-    if(buff.ReadableBytes() <= 0) {
+    if(buff.ReadableBytes() <= 0) { // 没有可读的字节
         return false;
     }
+    // 读取数据
     while(buff.ReadableBytes() && state_ != FINISH) {
+        // 从buff中的读指针开始到读指针结束，这块区域是未读取得数据并去处"\r\n"，返回有效数据得行末指针
         const char* lineEnd = search(buff.Peek(), buff.BeginWriteConst(), CRLF, CRLF + 2);
+        // 转化为string类型
         std::string line(buff.Peek(), lineEnd);
         switch(state_)
         {
+        /*
+            有限状态机，从请求行开始，每处理完后会自动转入到下一个状态    
+        */
         case REQUEST_LINE:
             if(!ParseRequestLine_(line)) {
                 return false;
             }
-            ParsePath_();
+            ParsePath_();   // 解析路径
             break;    
         case HEADERS:
             ParseHeader_(line);
@@ -50,13 +57,14 @@ bool HttpRequest::parse(Buffer& buff) {
         default:
             break;
         }
-        if(lineEnd == buff.BeginWrite()) { break; }
+        if(lineEnd == buff.BeginWrite()) { break; } // 读完了
         buff.RetrieveUntil(lineEnd + 2);        // 跳过回车换行
     }
     LOG_DEBUG("[%s], [%s], [%s]", method_.c_str(), path_.c_str(), version_.c_str());
     return true;
 }
 
+// 解析路径
 void HttpRequest::ParsePath_() {
     if(path_ == "/") {
         path_ = "/index.html"; 
@@ -78,7 +86,7 @@ bool HttpRequest::ParseRequestLine_(const string& line) {
         method_ = subMatch[1];
         path_ = subMatch[2];
         version_ = subMatch[3];
-        state_ = HEADERS;
+        state_ = HEADERS;   // 状态转换为下一个状态
         return true;
     }
     LOG_ERROR("RequestLine Error");
@@ -92,23 +100,25 @@ void HttpRequest::ParseHeader_(const string& line) {
         header_[subMatch[1]] = subMatch[2];
     }
     else {
-        state_ = BODY;
+        state_ = BODY;  // 状态转换为下一个状态
     }
 }
 
 void HttpRequest::ParseBody_(const string& line) {
     body_ = line;
     ParsePost_();
-    state_ = FINISH;
+    state_ = FINISH;    // 状态转换为下一个状态
     LOG_DEBUG("Body:%s, len:%d", line.c_str(), line.size());
 }
 
+// 16进制转化为10进制
 int HttpRequest::ConverHex(char ch) {
     if(ch >= 'A' && ch <= 'F') return ch -'A' + 10;
     if(ch >= 'a' && ch <= 'f') return ch -'a' + 10;
     return ch;
 }
 
+// 处理post请求
 void HttpRequest::ParsePost_() {
     if(method_ == "POST" && header_["Content-Type"] == "application/x-www-form-urlencoded") {
         ParseFromUrlencoded_();     // POST请求体示例
@@ -116,7 +126,7 @@ void HttpRequest::ParsePost_() {
             int tag = DEFAULT_HTML_TAG.find(path_)->second; 
             LOG_DEBUG("Tag:%d", tag);
             if(tag == 0 || tag == 1) {
-                bool isLogin = (tag == 1);
+                bool isLogin = (tag == 1);  // 为1则是登录
                 if(UserVerify(post_["username"], post_["password"], isLogin)) {
                     path_ = "/welcome.html";
                 } 
@@ -128,6 +138,7 @@ void HttpRequest::ParsePost_() {
     }   
 }
 
+// 从url中解析编码
 void HttpRequest::ParseFromUrlencoded_() {
     if(body_.size() == 0) { return; }
 
@@ -203,12 +214,12 @@ bool HttpRequest::UserVerify(const string &name, const string &pwd, bool isLogin
             if(pwd == password) { flag = true; }
             else {
                 flag = false;
-                LOG_DEBUG("pwd error!");
+                LOG_INFO("pwd error!");
             }
         } 
         else { 
             flag = false; 
-            LOG_DEBUG("user used!");
+            LOG_INFO("user used!");
         }
     }
     mysql_free_result(res);

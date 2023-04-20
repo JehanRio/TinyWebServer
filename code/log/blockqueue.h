@@ -137,7 +137,7 @@ bool BlockDeque<T>::pop(T &item) {
     }
     item = deq_.front();
     deq_.pop_front();
-    condProducer_.notify_one();     // 唤醒消费者
+    condProducer_.notify_one();     // 唤醒生产者
     return true;
 }
 
