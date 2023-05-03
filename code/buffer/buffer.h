@@ -23,7 +23,7 @@ public:
     void Retrieve(size_t len);
     void RetrieveUntil(const char* end);
 
-    void RetrieveAll() ;
+    void RetrieveAll();
     std::string RetrieveAllToStr();
 
     const char* BeginWriteConst() const;
