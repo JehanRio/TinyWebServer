@@ -43,7 +43,7 @@ void Log::init(int level = 1, const char* path, const char* suffix,
     if(maxQueueSize > 0) {  // 异步方式
         isAsync_ = true;    
         if(!deque_) {       // 为空则创建一个
-            unique_ptr<BlockDeque<std::string>> newDeque(new BlockDeque<std::string>);
+            unique_ptr<BlockQueue<std::string>> newDeque(new BlockQueue<std::string>);
             // 因为unique_ptr不支持普通的拷贝或赋值操作,所以采用move
             // 将动态申请的内存权给deque，newDeque被释放
             deque_ = move(newDeque);        // 左值变右值,掏空newDeque
@@ -182,6 +182,7 @@ void Log::AsyncWrite_() {
     }
 }
 
+// 懒汉模式：局部静态变量法（这种方法不需要加锁和解锁操作）
 Log* Log::Instance() {
     static Log inst;
     return &inst;
