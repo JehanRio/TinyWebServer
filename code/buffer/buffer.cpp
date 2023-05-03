@@ -19,6 +19,7 @@ size_t Buffer::PrependableBytes() const {
 }
 
 const char* Buffer::Peek() const {
+    
     return &buffer_[readPos_];
 }
 
@@ -112,6 +113,7 @@ ssize_t Buffer::ReadFd(int fd, int* Errno) {
     return len;
 }
 
+// 将buffer中可读的区域写入fd中
 ssize_t Buffer::WriteFd(int fd, int* Errno) {
     ssize_t len = write(fd, Peek(), ReadableBytes());
     if(len < 0) {
@@ -142,3 +144,4 @@ void Buffer::MakeSpace_(size_t len) {
         assert(readable == ReadableBytes());
     }
 }
+
