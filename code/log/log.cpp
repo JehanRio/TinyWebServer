@@ -1,62 +1,79 @@
 #include "log.h"
 
-using namespace std;
-
+// 构造函数
 Log::Log() {
-    lineCount_ = 0;
-    isAsync_ = false;
-    writeThread_ = nullptr;
-    deque_ = nullptr;
-    toDay_ = 0;
     fp_ = nullptr;
+    deque_ = nullptr;
+    writeThread_ = nullptr;
+    lineCount_ = 0;
+    toDay_ = 0;
+    isAsync_ = false;
 }
 
 Log::~Log() {
-    if(writeThread_ && writeThread_->joinable()) {
-        while(!deque_->empty()) {   // 清空阻塞队列中的全部任务
-            deque_->flush();
-        };
-        deque_->Close();
-        writeThread_->join();       // 等待当前线程完成手中的任务
+    while(!deque_->empty()) {
+        deque_->flush();    // 唤醒消费者，处理掉剩下的任务
     }
-    if(fp_) {   // 冲洗文件缓冲区，关闭文件描述符
+    deque_->Close();    // 关闭队列
+    writeThread_->join();   // 等待当前线程完成手中的任务
+    if(fp_) {       // 冲洗文件缓冲区，关闭文件描述符
         lock_guard<mutex> locker(mtx_);
-        flush();
-        fclose(fp_);
+        flush();        // 清空缓冲区中的数据
+        fclose(fp_);    // 关闭日志文件
     }
 }
 
-int Log::GetLevel() {
-    lock_guard<mutex> locker(mtx_);
-    return level_;
+// 唤醒阻塞队列消费者，开始写日志
+void Log::flush() {
+    if(isAsync_) {  // 只有异步日志才会用到deque
+        deque_->flush();
+    }
+    fflush(fp_);    // 清空输入缓冲区
 }
 
-void Log::SetLevel(int level) {
-    lock_guard<mutex> locker(mtx_);
-    level_ = level;
+// 懒汉模式 局部静态变量法（这种方法不需要加锁和解锁操作）
+Log* Log::Instance() {
+    static Log log;
+    return &log;
 }
 
-void Log::init(int level = 1, const char* path, const char* suffix,
-    int maxQueueSize) {
+// 异步日志的写线程函数
+void Log::FlushLogThread() {
+    Log::Instance()->AsyncWrite_();
+}
+
+// 写线程真正的执行函数
+void Log::AsyncWrite_() {
+    string str = "";
+    while(deque_->pop(str)) {
+        lock_guard<mutex> locker(mtx_);
+        fputs(str.c_str(), fp_);
+    }
+}
+
+// 初始化日志实例
+void Log::init(int level, const char* path, const char* suffix, int maxQueCapacity) {
     isOpen_ = true;
     level_ = level;
-    if(maxQueueSize > 0) {  // 异步方式
-        isAsync_ = true;    
-        if(!deque_) {       // 为空则创建一个
-            unique_ptr<BlockQueue<std::string>> newDeque(new BlockQueue<std::string>);
+    path_ = path;
+    suffix_ = suffix;
+    if(maxQueCapacity) {    // 异步方式
+        isAsync_ = true;
+        if(!deque_) {   // 为空则创建一个
+            unique_ptr<BlockQueue<std::string>> newQue(new BlockQueue<std::string>);
             // 因为unique_ptr不支持普通的拷贝或赋值操作,所以采用move
             // 将动态申请的内存权给deque，newDeque被释放
-            deque_ = move(newDeque);        // 左值变右值,掏空newDeque
-                
-            std::unique_ptr<std::thread> NewThread(new thread(FlushLogThread));
-            writeThread_ = move(NewThread); // 左值变右值,掏空NewThread
+            deque_ = move(newQue);  // 左值变右值,掏空newDeque
+
+            unique_ptr<thread> newThread(new thread(FlushLogThread));
+            writeThread_ = move(newThread);
         }
     } else {
         isAsync_ = false;
     }
 
     lineCount_ = 0;
-
+    
     time_t timer = time(nullptr);
     struct tm *sysTime = localtime(&timer);
     struct tm t = *sysTime;
@@ -70,16 +87,15 @@ void Log::init(int level = 1, const char* path, const char* suffix,
     {
         lock_guard<mutex> locker(mtx_);
         buff_.RetrieveAll();
-        if(fp_) { 
+        if(fp_) {   // 重新打开
             flush();
-            fclose(fp_); 
+            fclose(fp_);
         }
-
-        fp_ = fopen(fileName, "a");
+        fp_ = fopen(fileName, "a"); // 打开文件读取并附加写入
         if(fp_ == nullptr) {
-            mkdir(path_, 0777);     // 生成目录文件（最大权限）
-            fp_ = fopen(fileName, "a");
-        } 
+            mkdir(path_, 0777);
+            fp_ = fopen(fileName, "a"); // 生成目录文件（最大权限）
+        }
         assert(fp_ != nullptr);
     }
 }
@@ -92,7 +108,7 @@ void Log::write(int level, const char *format, ...) {
     struct tm t = *sysTime;
     va_list vaList;
 
-    /* 日志日期 日志行数 */
+    // 日志日期 日志行数  如果不是今天或行数超了
     if (toDay_ != t.tm_mday || (lineCount_ && (lineCount_  %  MAX_LINES == 0)))
     {
         unique_lock<mutex> locker(mtx_);
@@ -140,9 +156,9 @@ void Log::write(int level, const char *format, ...) {
         if(isAsync_ && deque_ && !deque_->full()) { // 异步方式（加入阻塞队列中，等待写线程读取日志信息）
             deque_->push_back(buff_.RetrieveAllToStr());
         } else {    // 同步方式（直接向文件中写入日志信息）
-            fputs(buff_.Peek(), fp_);
+            fputs(buff_.Peek(), fp_);   // 同步就直接写入文件
         }
-        buff_.RetrieveAll();
+        buff_.RetrieveAll();    // 清空buff
     }
 }
 
@@ -167,27 +183,12 @@ void Log::AppendLogLevelTitle_(int level) {
     }
 }
 
-void Log::flush() {
-    if(isAsync_) { 
-        deque_->flush(); 
-    }
-    fflush(fp_);
+int Log::GetLevel() {
+    lock_guard<mutex> locker(mtx_);
+    return level_;
 }
 
-void Log::AsyncWrite_() {
-    string str = "";
-    while(deque_->pop(str)) {
-        lock_guard<mutex> locker(mtx_);
-        fputs(str.c_str(), fp_);
-    }
-}
-
-// 懒汉模式：局部静态变量法（这种方法不需要加锁和解锁操作）
-Log* Log::Instance() {
-    static Log inst;
-    return &inst;
-}
-
-void Log::FlushLogThread() {
-    Log::Instance()->AsyncWrite_();
+void Log::SetLevel(int level) {
+    lock_guard<mutex> locker(mtx_);
+    level_ = level;
 }
