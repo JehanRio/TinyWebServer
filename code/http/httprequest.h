@@ -20,17 +20,6 @@ public:
         BODY,
         FINISH,        
     };
-
-    // enum HTTP_CODE {
-    //     NO_REQUEST = 0,
-    //     GET_REQUEST,
-    //     BAD_REQUEST,
-    //     NO_RESOURSE,
-    //     FORBIDDENT_REQUEST,
-    //     FILE_REQUEST,
-    //     INTERNAL_ERROR,
-    //     CLOSED_CONNECTION,
-    // };
     
     HttpRequest() { Init(); }
     ~HttpRequest() = default;
@@ -46,12 +35,6 @@ public:
     std::string GetPost(const char* key) const;
 
     bool IsKeepAlive() const;
-
-    /* 
-    todo 
-    void HttpConn::ParseFormData() {}
-    void HttpConn::ParseJson() {}
-    */
 
 private:
     bool ParseRequestLine_(const std::string& line);    // 处理请求行
@@ -74,5 +57,4 @@ private:
     static int ConverHex(char ch);  // 16进制转换为10进制
 };
 
-
-#endif //HTTP_REQUEST_H
+#endif

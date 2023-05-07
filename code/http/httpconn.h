@@ -17,25 +17,16 @@
 class HttpConn {
 public:
     HttpConn();
-
     ~HttpConn();
-
+    
     void init(int sockFd, const sockaddr_in& addr);
-
     ssize_t read(int* saveErrno);
-
     ssize_t write(int* saveErrno);
-
     void Close();
-
     int GetFd() const;
-
     int GetPort() const;
-
     const char* GetIP() const;
-    
     sockaddr_in GetAddr() const;
-    
     bool process();
 
     // 写的总长度

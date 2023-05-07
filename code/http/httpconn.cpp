@@ -103,12 +103,12 @@ bool HttpConn::process() {
     }
 
     response_.MakeResponse(writeBuff_); // 生成响应报文放入writeBuff_中
-    /* 响应头 */
+    // 响应头
     iov_[0].iov_base = const_cast<char*>(writeBuff_.Peek());
     iov_[0].iov_len = writeBuff_.ReadableBytes();
     iovCnt_ = 1;
 
-    /* 文件 */
+    // 文件
     if(response_.FileLen() > 0  && response_.File()) {
         iov_[1].iov_base = response_.File();
         iov_[1].iov_len = response_.FileLen();

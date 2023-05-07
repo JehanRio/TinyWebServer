@@ -122,8 +122,7 @@ void HttpResponse::AddContent_(Buffer& buff) {
         return; 
     }
 
-    /* 将文件映射到内存提高文件的访问速度 
-        MAP_PRIVATE 建立一个写入时拷贝的私有映射*/
+    //将文件映射到内存提高文件的访问速度  MAP_PRIVATE 建立一个写入时拷贝的私有映射
     LOG_DEBUG("file path %s", (srcDir_ + path_).data());
     int* mmRet = (int*)mmap(0, mmFileStat_.st_size, PROT_READ, MAP_PRIVATE, srcFd, 0);
     if(*mmRet == -1) {
@@ -142,10 +141,10 @@ void HttpResponse::UnmapFile() {
     }
 }
 
+// 判断文件类型 
 string HttpResponse::GetFileType_() {
-    /* 判断文件类型 */
     string::size_type idx = path_.find_last_of('.');
-    if(idx == string::npos) {
+    if(idx == string::npos) {   // 最大值 find函数在找不到指定值得情况下会返回string::npos
         return "text/plain";
     }
     string suffix = path_.substr(idx);

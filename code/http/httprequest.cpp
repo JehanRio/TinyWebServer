@@ -1,54 +1,47 @@
 #include "httprequest.h"
 using namespace std;
 
-const unordered_set<string> HttpRequest::DEFAULT_HTML{
-            "/index", "/register", "/login",
-             "/welcome", "/video", "/picture", };
+// 网页名称，和一般的前端跳转不同，这里需要将请求信息放到后端来验证一遍再上传（和小组成员还起过争执）
+const unordered_set<string> HttpRequest::DEFAULT_HTML {
+    "/index", "/register", "/login", "/welcome", "/video", "/picture",
+};
 
+// 登录/注册
 const unordered_map<string, int> HttpRequest::DEFAULT_HTML_TAG {
-            {"/register.html", 0}, {"/login.html", 1},  };
+    {"/login.html", 1}, {"/register.html", 0}
+};
 
+// 初始化操作，一些清零操作
 void HttpRequest::Init() {
-    method_ = path_ = version_ = body_ = "";
-    state_ = REQUEST_LINE;
+    state_ = REQUEST_LINE;  // 初始状态
+    method_ = path_ = version_= body_ = "";
     header_.clear();
     post_.clear();
 }
 
-bool HttpRequest::IsKeepAlive() const {
-    if(header_.count("Connection") == 1) {
-        return header_.find("Connection")->second == "keep-alive" && version_ == "1.1";
-    }
-    return false;
-}
-
 // 解析处理
 bool HttpRequest::parse(Buffer& buff) {
-    const char CRLF[] = "\r\n";      // 行结束符标志(回车换行)
-    if(buff.ReadableBytes() <= 0) { // 没有可读的字节
+    const char END[] = "\r\n";
+    if(buff.ReadableBytes() == 0)   // 没有可读的字节
         return false;
-    }
-    // 读取数据
+    // 读取数据开始
     while(buff.ReadableBytes() && state_ != FINISH) {
         // 从buff中的读指针开始到读指针结束，这块区域是未读取得数据并去处"\r\n"，返回有效数据得行末指针
-        const char* lineEnd = search(buff.Peek(), buff.BeginWriteConst(), CRLF, CRLF + 2);
-        // 转化为string类型
-        std::string line(buff.Peek(), lineEnd);
-        switch(state_)
+        const char* lineend = search(buff.Peek(), buff.BeginWriteConst(), END, END+2);
+        string line(buff.Peek(), lineend);
+        switch (state_)
         {
-        /*
-            有限状态机，从请求行开始，每处理完后会自动转入到下一个状态    
-        */
         case REQUEST_LINE:
+            // 解析错误
             if(!ParseRequestLine_(line)) {
                 return false;
             }
             ParsePath_();   // 解析路径
-            break;    
+            break;
         case HEADERS:
             ParseHeader_(line);
-            if(buff.ReadableBytes() <= 2) { 
-                state_ = FINISH;
+            if(buff.ReadableBytes() <= 2) {  // 说明是get请求，后面为\r\n
+                state_ = FINISH;   // 提前结束
             }
             break;
         case BODY:
@@ -57,50 +50,49 @@ bool HttpRequest::parse(Buffer& buff) {
         default:
             break;
         }
-        if(lineEnd == buff.BeginWrite()) { break; } // 读完了
-        buff.RetrieveUntil(lineEnd + 2);        // 跳过回车换行
+        if(lineend == buff.BeginWrite()) {  // 读完了
+            buff.RetrieveAll();
+            break;
+        }
+        buff.RetrieveUntil(lineend + 2);        // 跳过回车换行
     }
     LOG_DEBUG("[%s], [%s], [%s]", method_.c_str(), path_.c_str(), version_.c_str());
     return true;
 }
 
-// 解析路径
-void HttpRequest::ParsePath_() {
-    if(path_ == "/") {
-        path_ = "/index.html"; 
-    }
-    else {
-        for(auto &item: DEFAULT_HTML) {
-            if(item == path_) {
-                path_ += ".html";
-                break;
-            }
-        }
-    }
-}
-
 bool HttpRequest::ParseRequestLine_(const string& line) {
     regex patten("^([^ ]*) ([^ ]*) HTTP/([^ ]*)$");
-    smatch subMatch;
-    if(regex_match(line, subMatch, patten)) {   
-        method_ = subMatch[1];
-        path_ = subMatch[2];
-        version_ = subMatch[3];
-        state_ = HEADERS;   // 状态转换为下一个状态
+    smatch Match;   // 用来匹配patten得到结果
+    // 在匹配规则中，以括号()的方式来划分组别 一共三个括号 [0]表示整体
+    if(regex_match(line, Match, patten)) {  // 匹配指定字符串整体是否符合
+        method_ = Match[1];
+        path_ = Match[2];
+        version_ = Match[3];
+        state_ = HEADERS;
         return true;
     }
     LOG_ERROR("RequestLine Error");
     return false;
 }
 
+// 解析路径，统一一下path名称,方便后面解析资源
+void HttpRequest::ParsePath_() {
+    if(path_ == "/") {
+        path_ = "/index.html";
+    } else {
+        if(DEFAULT_HTML.find(path_) != DEFAULT_HTML.end()) {
+            path_ += ".html";
+        }
+    }
+}
+
 void HttpRequest::ParseHeader_(const string& line) {
     regex patten("^([^:]*): ?(.*)$");
-    smatch subMatch;
-    if(regex_match(line, subMatch, patten)) {
-        header_[subMatch[1]] = subMatch[2];
-    }
-    else {
-        state_ = BODY;  // 状态转换为下一个状态
+    smatch Match;
+    if(regex_match(line, Match, patten)) {
+        header_[Match[1]] = Match[2];
+    } else {    // 匹配失败说明首部行匹配完了，状态变化
+        state_ = BODY;
     }
 }
 
@@ -111,10 +103,13 @@ void HttpRequest::ParseBody_(const string& line) {
     LOG_DEBUG("Body:%s, len:%d", line.c_str(), line.size());
 }
 
+
 // 16进制转化为10进制
 int HttpRequest::ConverHex(char ch) {
-    if(ch >= 'A' && ch <= 'F') return ch -'A' + 10;
-    if(ch >= 'a' && ch <= 'f') return ch -'a' + 10;
+    if(ch >= 'A' && ch <= 'F') 
+        return ch -'A' + 10;
+    if(ch >= 'a' && ch <= 'f') 
+        return ch -'a' + 10;
     return ch;
 }
 
@@ -184,7 +179,7 @@ bool HttpRequest::UserVerify(const string &name, const string &pwd, bool isLogin
     if(name == "" || pwd == "") { return false; }
     LOG_INFO("Verify name:%s pwd:%s", name.c_str(), pwd.c_str());
     MYSQL* sql;
-    SqlConnRAII(&sql,  SqlConnPool::Instance());
+    SqlConnRAII(&sql, SqlConnPool::Instance());
     assert(sql);
     
     bool flag = false;
@@ -270,4 +265,11 @@ std::string HttpRequest::GetPost(const char* key) const {
         return post_.find(key)->second;
     }
     return "";
+}
+
+bool HttpRequest::IsKeepAlive() const {
+    if(header_.count("Connection") == 1) {
+        return header_.find("Connection")->second == "keep-alive" && version_ == "1.1";
+    }
+    return false;
 }
