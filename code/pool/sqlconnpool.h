@@ -17,7 +17,7 @@ public:
     void FreeConn(MYSQL * conn);
     int GetFreeConnCount();
 
-    void Init(const char* host, int port,
+    void Init(const char* host, uint16_t port,
               const char* user,const char* pwd, 
               const char* dbName, int connSize);
     void ClosePool();

@@ -29,6 +29,7 @@ bool Epoller::DelFd(int fd) {
     return 0 == epoll_ctl(epollFd_, EPOLL_CTL_DEL, fd, 0);
 }
 
+// 返回事件数量
 int Epoller::Wait(int timeoutMs) {
     return epoll_wait(epollFd_, &events_[0], static_cast<int>(events_.size()), timeoutMs);
 }
