@@ -4,6 +4,8 @@
 
 于是就有了这个版本，该版本采用C++11新特性，在功能上补全了数据库、日志系统等功能。
 
+感谢@markparticle学长的项目，我的这个项目是一个学习项目，看了他的源码后自己手敲一遍加深印象的。他的Readme写的很清晰，下次仓库Readme也要用这样的方式写。
+
 ## Function
 * 利用IO复用技术Epoll与线程池实现多线程的Reactor高并发模型；
 * 利用正则与状态机解析HTTP请求报文，实现处理静态资源的请求；
@@ -16,7 +18,7 @@
 
 ## Environment
 * Ubuntu 18
-* C++14
+* Modern C++
 * MySql
 * Vscode
 * git
