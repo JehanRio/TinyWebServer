@@ -1,6 +1,6 @@
 # A C++轻量级、高性能、高并发的Web服务器
 ## Introduction
-该项目仅用于学习，感谢@markparticle学长的项目，看了他的源码后自己手敲一遍加深印象的。他的Readme写的很清晰，下次仓库Readme也要用这样的方式写。
+用C++实现的高性能WEB服务器，经过webbenchh压力测试可以实现上万的QPS
 
 ## Function
 * 利用IO复用技术Epoll与线程池实现多线程的Reactor高并发模型；
